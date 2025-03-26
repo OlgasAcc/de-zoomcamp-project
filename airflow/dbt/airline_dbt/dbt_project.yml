@@ -1,0 +1,13 @@
+name: airline_dbt
+version: 1.0.0
+
+profile: airline_dbt
+
+model-paths: ["models"]
+
+models:
+  airline_dbt:  # this matches the `name:` above
+    staging:
+      +materialized: view
+    marts:
+      +materialized: table

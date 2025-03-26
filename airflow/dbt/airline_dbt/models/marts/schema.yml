@@ -1,0 +1,14 @@
+version: 2
+
+#sources:
+#  - name: airline_data
+#    database: terraform-demo-452019     # GCP project ID
+#    schema: airline_data                # BigQuery dataset
+#    tables:
+#      - name: raw_flight_delays
+
+models:
+  - name: delays_by_carrier
+    description: "Aggregated delay metrics per airline"
+  - name: delays_over_time
+    description: "Monthly delay trends"

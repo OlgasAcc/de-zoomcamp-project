@@ -1,0 +1,17 @@
+version: 2
+
+sources:
+  - name: airline_data
+    database: terraform-demo-452019     # GCP project ID
+    schema: airline_data                # BigQuery dataset
+    tables:
+      - name: raw_flight_delays
+
+models:
+  - name: stg_flight_delays
+    description: "Standardized raw flight delay data"
+    columns:
+      - name: flight_date
+        tests: [not_null]
+      - name: carrier
+        tests: [not_null]

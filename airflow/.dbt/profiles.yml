@@ -1,0 +1,10 @@
+airline_dbt:
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: service-account
+      project: terraform-demo-452019
+      dataset: airline_data
+      keyfile: /opt/keys/gcp-creds.json
+      threads: 2
