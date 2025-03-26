@@ -1,0 +1,231 @@
+version: '3.8'
+
+x-common-airflow-env: &common_airflow_env
+  AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+  AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+  AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
+  AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
+  AIRFLOW__CORE__FERNET_KEY: ''
+  AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+  AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
+  AIRFLOW__WEBSERVER__SECRET_KEY: 'F452iyqgkjpfDABR52oaTw=='
+  AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
+  AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+  AIRFLOW__CORE__TEST_CONNECTION: 'enabled'
+  GCP_PROJECT_ID: ${GCP_PROJECT_ID}
+  GCP_BUCKET_NAME: ${GCP_BUCKET_NAME}
+  GCP_BQ_DATASET: ${GCP_BQ_DATASET}
+  GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS}
+
+x-airflow-depends-on: &airflow_depends_on
+  redis:
+    condition: service_healthy
+  postgres:
+    condition: service_healthy
+  airflow-init:
+    condition: service_completed_successfully
+
+services:
+  spark-master:
+    image: bitnami/spark:latest
+    container_name: spark-master
+    environment:
+      - GCS_BUCKET=${GCP_BUCKET_NAME}
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
+      - SPARK_EXTRA_CLASSPATH=/opt/spark/jars/gcs-connector-hadoop3-latest.jar
+    volumes:
+      - ./keys/gcp-creds.json:/opt/keys/gcp-creds.json:ro
+    ports:
+      - "7077:7077"
+      - "8080:8080"
+
+  spark-worker:
+    image: bitnami/spark:latest
+    container_name: spark-worker
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+    volumes:
+      - ./keys/gcp-creds.json:/opt/keys/gcp-creds.json:ro
+    depends_on:
+      - spark-master
+
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres-db-volume:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+    restart: always
+
+  redis:
+    image: redis:7.2-bookworm
+    expose:
+      - 6379
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 30s
+      retries: 50
+      start_period: 30s
+    restart: always
+
+  airflow-webserver:
+    build: ./airflow
+    command: webserver
+    environment:
+      <<: *common_airflow_env
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/dbt:/opt/airflow/dbt
+      - ./airflow/.dbt:/home/airflow/.dbt
+      - ./airflow/kaggle:/home/airflow/.config/kaggle
+      - ./keys/gcp-creds.json:/opt/keys/gcp-creds.json:ro
+      - ./spark/jobs:/opt/airflow/spark-jobs
+      - ./spark/jars:/opt/airflow/spark/jars
+    ports:
+      - "8082:8080"
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "http://localhost:8082/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      <<: *airflow_depends_on
+
+  airflow-scheduler:
+    build: ./airflow
+    command: scheduler
+    environment:
+      <<: *common_airflow_env
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/dbt:/opt/airflow/dbt
+      - ./airflow/.dbt:/home/airflow/.dbt
+      - ./airflow/kaggle:/home/airflow/.config/kaggle
+      - ./keys/gcp-creds.json:/opt/keys/gcp-creds.json:ro
+      - ./spark/jobs:/opt/airflow/spark-jobs
+      - ./spark/jars:/opt/airflow/spark/jars
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "http://localhost:8974/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      <<: *airflow_depends_on
+
+  airflow-worker:
+    build: ./airflow
+    command: celery worker
+    environment:
+      <<: *common_airflow_env
+      DUMB_INIT_SETSID: "0"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/dbt:/opt/airflow/dbt
+      - ./airflow/.dbt:/home/airflow/.dbt
+      - ./airflow/kaggle:/home/airflow/.config/kaggle
+      - ./keys/gcp-creds.json:/opt/keys/gcp-creds.json:ro
+      - ./spark/jobs:/opt/airflow/spark-jobs
+      - ./spark/jars:/opt/airflow/spark/jars
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - 'celery --app airflow.providers.celery.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}" || celery --app airflow.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}"'
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      <<: *airflow_depends_on
+
+  airflow-triggerer:
+    build: ./airflow
+    command: triggerer
+    environment:
+      <<: *common_airflow_env
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/dbt:/opt/airflow/dbt
+      - ./airflow/.dbt:/home/airflow/.dbt
+      - ./airflow/kaggle:/home/airflow/.config/kaggle
+      - ./keys/gcp-creds.json:/opt/keys/gcp-creds.json:ro
+      - ./spark/jobs:/opt/airflow/spark-jobs
+      - ./spark/jars:/opt/airflow/spark/jars
+    healthcheck:
+      test: [ "CMD-SHELL", 'airflow jobs check --job-type TriggererJob --hostname "$${HOSTNAME}"' ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      <<: *airflow_depends_on
+
+  airflow-init:
+    build: ./airflow
+    restart: "no"
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        echo "Running Airflow DB migrations..."
+        airflow db upgrade
+        echo "Creating Airflow user..."
+        airflow users create \
+          --username ${_AIRFLOW_WWW_USER_USERNAME:-airflow} \
+          --password ${_AIRFLOW_WWW_USER_PASSWORD:-airflow} \
+          --firstname Admin \
+          --lastname User \
+          --role Admin \
+          --email admin@example.com
+        echo "Initialization complete!"
+    environment:
+      <<: *common_airflow_env
+      _AIRFLOW_DB_MIGRATE: 'true'
+      _AIRFLOW_WWW_USER_CREATE: 'true'
+      _AIRFLOW_WWW_USER_USERNAME: ${_AIRFLOW_WWW_USER_USERNAME:-airflow}
+      _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD:-airflow}
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/dbt:/opt/airflow/dbt
+      - ./airflow/.dbt:/home/airflow/.dbt
+      - ./airflow/kaggle:/home/airflow/.config/kaggle
+      - ./keys/gcp-creds.json:/opt/keys/gcp-creds.json:ro
+      - ./spark/jobs:/opt/airflow/spark-jobs
+      - ./spark/jars:/opt/airflow/spark/jars
+    user: "50000:0"
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  airflow-cli:
+    build: ./airflow
+    profiles:
+      - debug
+    environment:
+      <<: *common_airflow_env
+      CONNECTION_CHECK_MAX_COUNT: "0"
+    # Workaround for entrypoint issue. See: https://github.com/apache/airflow/issues/16252
+    command:
+      - bash
+      - -c
+      - airflow
+
+volumes:
+  postgres-db-volume:
