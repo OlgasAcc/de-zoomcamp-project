@@ -91,7 +91,7 @@ graph TD
 Expected result:
 
 <p align="left">
-  <img src="images/img_terraform_result.png" alt="DataTalksClub Logo"/>
+  <img src="images/img_terraform_result.png" alt="terraform_result"/>
 </p>
 
 ### Spark:
@@ -158,29 +158,57 @@ Alternatively, you can create the connections using the following `docker exec` 
     ```
 
 <p align="left">
-  <img src="images/img_airflow_connections.png" alt="DataTalksClub Logo"/>
+  <img src="images/img_airflow_connections.png" alt="airflow_connections"/>
 </p>
 
 **Trigger the Airflow DAG "airline_delay_pipeline"**:
 
 <p align="left">
-  <img src="images/img_airflow_trigger_dag.png" alt="DataTalksClub Logo"/>
+  <img src="images/img_airflow_trigger_dag.png" alt="airflow_trigger_dag"/>
 </p>
 
-Successful DAG runs:
+Successful DAG run:
 <p align="left">
-  <img src="images/img_airflow_dag_progress.png" alt="DataTalksClub Logo"/>
+  <img src="images/img_airflow_dag_progress.png" alt="airflow_dag_progress"/>
 </p>
 
 **Verification**
 
 * **Airflow UI:** `http://localhost:8082` (username: `airflow`, password: `airflow`)
 * **Spark UI:** `http://localhost:8080`
+
+Expected result:
+<p align="left">
+  <img src="images/img_spark_progress.png" alt="spark_progress"/>
+</p>
+
 * **PostgreSQL:** Verify the table content using the following command:
     ```bash
     docker exec -it de-zoomcamp-project-postgres-1 psql -U airflow -d airline_data -c "SELECT * FROM delayed_flights_raw LIMIT 10;" | less -S
     ```
+Expected result:
+<p align="left">
+  <img src="images/img_download_dataset_pg_result.png" alt="download_dataset_pg_result"/>
+</p>
+
 * **GCP Bucket and BigQuery Dataset:** Check the resources in the Google Cloud Console (Cloud Storage (--> Buckets) and BigQuery sections).
+
+Expected results:
+<p align="left">
+  <img src="images/img_spark_job_result.png" alt="spark_job_result"/>
+</p>
+
+<p align="left">
+  <img src="images/img_gcp_to_bigquery_result.png" alt="gcp_to_bigquery_result"/>
+</p>
+
+<p align="left">
+  <img src="images/img_dbt_target_table_1.png" alt="dbt_target_table_1"/>
+</p>
+
+<p align="left">
+  <img src="images/img_dbt_target_table_2.png" alt="dbt_target_table_2"/>
+</p>
 
 ## Dashboard (Google Looker Studio):
 
@@ -193,7 +221,7 @@ These tables are queried within the Looker Studio dashboard to visualize the dat
 The added resources in Looker (from "BigQuery"):
 
 <p align="left">
-  <img src="images/img_dashboard_added_resources.png" alt="DataTalksClub Logo"/>
+  <img src="images/img_dashboard_added_resources.png" alt="dashboard_added_resources"/>
 </p>
 
 Access the dashboard using the following link:
