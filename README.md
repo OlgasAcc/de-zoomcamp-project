@@ -4,7 +4,7 @@
   <img src="images/datatalks_club_logo.png" alt="DataTalksClub Logo" width="200"/>
 </p>
 
-**Project author:** Olha Krasnozhon
+**Project author:** Olga Krasnozhon
 
 **Course:** [DataTalksClub Data Engineering Zoomcamp](https://github.com/DataTalksClub/data-engineering-zoomcamp)
 
