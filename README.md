@@ -10,6 +10,8 @@
 
 ## End-to-End Data Pipeline:
 
+![Animated data pipeline flow](images/pipeline.gif)
+
 ```mermaid
 graph TD
     subgraph T[Terraform Infrastructure]
