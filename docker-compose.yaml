@@ -90,7 +90,6 @@ services:
       - ./airflow/kaggle:/home/airflow/.config/kaggle
       - ./keys/gcp-creds.json:/opt/keys/gcp-creds.json:ro
       - ./spark/jobs:/opt/airflow/spark-jobs
-      - ./spark/jars:/opt/airflow/spark/jars
     ports:
       - "8082:8080"
     healthcheck:
@@ -115,7 +114,6 @@ services:
       - ./airflow/kaggle:/home/airflow/.config/kaggle
       - ./keys/gcp-creds.json:/opt/keys/gcp-creds.json:ro
       - ./spark/jobs:/opt/airflow/spark-jobs
-      - ./spark/jars:/opt/airflow/spark/jars
     healthcheck:
       test: [ "CMD", "curl", "--fail", "http://localhost:8974/health" ]
       interval: 30s
@@ -139,7 +137,6 @@ services:
       - ./airflow/kaggle:/home/airflow/.config/kaggle
       - ./keys/gcp-creds.json:/opt/keys/gcp-creds.json:ro
       - ./spark/jobs:/opt/airflow/spark-jobs
-      - ./spark/jars:/opt/airflow/spark/jars
     healthcheck:
       test:
         - "CMD-SHELL"
@@ -164,7 +161,6 @@ services:
       - ./airflow/kaggle:/home/airflow/.config/kaggle
       - ./keys/gcp-creds.json:/opt/keys/gcp-creds.json:ro
       - ./spark/jobs:/opt/airflow/spark-jobs
-      - ./spark/jars:/opt/airflow/spark/jars
     healthcheck:
       test: [ "CMD-SHELL", 'airflow jobs check --job-type TriggererJob --hostname "$${HOSTNAME}"' ]
       interval: 30s
@@ -206,7 +202,6 @@ services:
       - ./airflow/kaggle:/home/airflow/.config/kaggle
       - ./keys/gcp-creds.json:/opt/keys/gcp-creds.json:ro
       - ./spark/jobs:/opt/airflow/spark-jobs
-      - ./spark/jars:/opt/airflow/spark/jars
     user: "50000:0"
     depends_on:
       redis:

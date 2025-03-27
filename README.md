@@ -12,6 +12,16 @@
 
 ```mermaid
 graph TD
+    subgraph T[Terraform Infrastructure]
+        direction TB
+        T1[GCP Project Setup]
+        T2[GCS Bucket Creation]
+        T3[BigQuery Dataset Creation]
+        T4[Service Account Creation]
+        T5[IAM Role Assignment]
+        T6[Creds file generation]
+    end
+
     subgraph A[Airflow Orchestration]
         direction TB
         A1[Kaggle: extract dataset .csv]
@@ -37,6 +47,7 @@ graph TD
 
     end
 
+    T --> A
     A9 --> B[Looker Studio Dashboard]
     A10 --> B
 ```
@@ -93,15 +104,6 @@ Expected result:
 <p align="left">
   <img src="images/img_terraform_result.png" alt="terraform_result"/>
 </p>
-
-### Spark:
-
-If the GCS Hadoop and PostgreSQL connectors JAR files do not already exist in the `spark/jars` directory, download them using the following commands:
-
-```bash
-wget [https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-hadoop3-latest.jar](https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-hadoop3-latest.jar) -P spark/jars/
-wget [https://jdbc.postgresql.org/download/postgresql-42.7.3.jar](https://jdbc.postgresql.org/download/postgresql-42.7.3.jar) -P spark/jars/
-```
 
 ### Docker Compose:
 
